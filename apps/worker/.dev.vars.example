@@ -1,0 +1,6 @@
+# Local development secrets
+# Copy to .dev.vars and fill in your values
+
+XYNTH_API_KEY=test_key_here
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
+

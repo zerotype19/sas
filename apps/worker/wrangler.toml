@@ -1,0 +1,82 @@
+name = "sas-worker"
+main = "src/index.ts"
+compatibility_date = "2025-10-01"
+
+# NOTE: After creating D1 and KV in Cloudflare dashboard, replace these IDs:
+# wrangler d1 create sas_db
+# wrangler kv:namespace create KV
+
+[[d1_databases]]
+binding = "DB"
+database_name = "sas_db"
+database_id = "aece1fa6-165f-4806-aac9-572fd18d5a23"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "7d4aaca5d0ef46169115301b510fab6d"
+
+[[queues.producers]]
+binding = "INGEST_QUEUE"
+queue = "sas-ingest"
+
+[[queues.consumers]]
+queue = "sas-ingest"
+max_batch_size = 25
+max_retries = 3
+
+[triggers]
+crons = [
+  "*/15 * * * 1-5",  # Every 15 minutes on weekdays (market data ingestion)
+  "45 13 * * 1-5",   # 9:45 AM ET (1:45 PM UTC)
+  "45 16 * * 1-5",   # 12:45 PM ET (4:45 PM UTC)
+  "45 19 * * 1-5"    # 3:45 PM ET (7:45 PM UTC)
+]
+
+[vars]
+APP_ENV = "dev"
+ALERT_CHANNEL = "slack"
+RISK_MAX_POSITIONS = "5"
+RISK_MAX_EQUITY_AT_RISK_PCT = "20"
+RISK_PER_TRADE_PCT = "2.5"
+XYNTH_API_BASE = "https://api.xynth.ai"
+ACCOUNT_EQUITY = "100000"
+SAS_PHASE = "1"  # Strategy phase: 1 (Long Call + Bull Put), 2 (+ Long Put + Bear Call), 3 (+ Iron Condor + Calendar)
+
+# IBKR Broker Integration (local development)
+IBKR_BROKER_BASE = "http://127.0.0.1:8081"  # Local only - use production env for tunnel
+TRADING_MODE = "paper"
+
+# Secrets (set via: wrangler secret put <NAME>)
+# - XYNTH_API_KEY
+# - SLACK_WEBHOOK_URL
+# - SENDGRID_API_KEY (optional for email alerts)
+# - TELEGRAM_BOT_TOKEN
+# - TELEGRAM_CHAT_ID
+
+# Production environment (Mac mini + Cloudflare Tunnel)
+[env.production]
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "sas-proposals"
+database_id = "4d5799a8-6d28-491b-8ae7-0e357079e63f"
+
+[env.production.vars]
+APP_ENV = "production"
+ALERT_CHANNEL = "telegram"
+RISK_MAX_POSITIONS = "5"
+RISK_MAX_EQUITY_AT_RISK_PCT = "20"
+RISK_PER_TRADE_PCT = "2.5"
+XYNTH_API_BASE = "https://api.xynth.ai"
+ACCOUNT_EQUITY = "100000"
+IBKR_BROKER_BASE = "https://ibkr-broker.gekkoworks.com"
+TRADING_MODE = "paper"
+WORKER_BASE_URL = "https://sas-worker-production.kevin-mcgovern.workers.dev"
+SAS_PHASE = "3"  # Enable all strategies (Phase 1-3)
+
+# Set these secrets for production:
+# wrangler secret put CF_ACCESS_CLIENT_ID --env production
+# wrangler secret put CF_ACCESS_CLIENT_SECRET --env production
+# wrangler secret put TELEGRAM_BOT_TOKEN --env production
+# wrangler secret put TELEGRAM_CHAT_ID --env production
+

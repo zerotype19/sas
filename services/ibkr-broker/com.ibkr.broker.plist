@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.ibkr.broker</string>
+    
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-lc</string>
+        <string>~/ibkr-broker/run.sh</string>
+    </array>
+    
+    <key>RunAtLoad</key>
+    <true/>
+    
+    <key>KeepAlive</key>
+    <true/>
+    
+    <key>StandardOutPath</key>
+    <string>~/ibkr-broker/broker.out.log</string>
+    
+    <key>StandardErrorPath</key>
+    <string>~/ibkr-broker/broker.err.log</string>
+    
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>IB_HOST</key>
+        <string>127.0.0.1</string>
+        
+        <key>IB_PORT</key>
+        <string>7497</string>
+        
+        <key>IB_CLIENT_ID</key>
+        <string>20</string>
+        
+        <key>IB_MKT_DATA_TYPE</key>
+        <string>3</string>
+    </dict>
+</dict>
+</plist>
+

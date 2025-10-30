@@ -1,0 +1,15 @@
+node_modules
+.DS_Store
+.vscode
+.env*
+dist
+.wrangler
+.dev.vars
+
+# Keep wrangler.toml for now as template
+# wrangler.toml
+
+# Build outputs
+**/dist
+**/.turbo
+

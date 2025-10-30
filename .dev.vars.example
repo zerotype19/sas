@@ -1,0 +1,13 @@
+# Example development environment variables
+# Copy this to .dev.vars for local development
+# DO NOT commit .dev.vars to git
+
+# Xynth API
+XYNTH_API_KEY=your_xynth_api_key_here
+
+# Slack webhook for alerts
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
+
+# SendGrid (optional for email alerts)
+# SENDGRID_API_KEY=your_sendgrid_api_key_here
+

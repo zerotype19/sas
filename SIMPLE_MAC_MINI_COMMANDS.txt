@@ -1,0 +1,21 @@
+╔══════════════════════════════════════════════════════════════╗
+║   Copy-Paste These Commands on Your Mac Mini Terminal       ║
+╚══════════════════════════════════════════════════════════════╝
+
+# 1. Backup current main.py
+cp ~/ibkr-broker/app/main.py ~/ibkr-broker/app/main.py.backup.$(date +%s)
+
+# 2. Stop service
+launchctl stop com.sas.ibkr-broker
+
+# 3. Download updated main.py
+curl -o ~/ibkr-broker/app/main.py https://raw.githubusercontent.com/YOUR_REPO/main/services/ibkr-broker/app/main.py
+
+# OR manually create it (see next section)
+
+# 4. Restart service
+launchctl start com.sas.ibkr-broker
+
+# 5. Check logs
+tail -20 ~/ibkr-broker/broker.err.log
+

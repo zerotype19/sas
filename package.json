@@ -1,0 +1,22 @@
+{
+  "name": "sas-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:worker": "pnpm --filter @sas/worker dev",
+    "dev:web": "pnpm --filter @sas/web dev",
+    "db:migrate:local": "cd apps/worker && wrangler d1 execute sas_db --local --file=migrations/001_init.sql",
+    "db:migrate": "cd apps/worker && wrangler d1 execute sas_db --file=migrations/001_init.sql",
+    "deploy:worker": "cd apps/worker && wrangler deploy",
+    "deploy:web": "cd apps/web && pnpm build && wrangler pages deploy dist",
+    "build": "pnpm --filter @sas/shared build && pnpm --filter @sas/worker build && pnpm --filter @sas/web build",
+    "test:worker": "pnpm --filter @sas/worker test",
+    "test": "pnpm test:worker"
+  },
+  "packageManager": "pnpm@9.0.0"
+}
+

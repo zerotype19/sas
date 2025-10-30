@@ -1,0 +1,387 @@
+/**
+ * Phase 2B: Real Strategy Engine
+ * 
+ * Implements two production strategies:
+ * 1. Bull Put Credit Spread (premium selling, defined risk)
+ * 2. Long Call Debit Momentum (trend follow, defined risk)
+ * 
+ * Reads from: option_quotes, iv_history, market_data
+ * Returns: Ranked candidates (no D1 writes here)
+ */
+
+import { Hono } from 'hono';
+import type { Bindings } from '../env';
+import { ivRank, mid, pctBidAsk } from '../utils/options';
+
+const app = new Hono<{ Bindings: Bindings }>();
+
+// Strategy Parameters (from spec)
+const CREDIT = {
+  DTE_MIN: 30,
+  DTE_MAX: 45,
+  DELTA_MIN: -0.30,
+  DELTA_MAX: -0.20,
+  WIDTH: 5,
+  MIN_CREDIT_FRAC: 0.30, // 30% of width (relaxed for paper/delayed)
+  MAX_SPREAD_PCT: 20 // 20% (relaxed for delayed data)
+};
+
+const DEBIT = {
+  DTE_MIN: 30,
+  DTE_MAX: 60,
+  DELTA_MIN: 0.60,
+  DELTA_MAX: 0.70,
+  MAX_SPREAD_PCT: 20, // 20% (relaxed for delayed data)
+  MAX_IVR: 40 // Prefer low IV for buying
+};
+
+const RISK = {
+  FRACTION: 0.005, // 0.5% of equity per trade
+  MAX_NOTIONAL: 10000, // $10k max per position
+  MAX_QTY: 5 // Max 5 contracts per leg
+};
+
+/**
+ * Main strategy runner
+ * Analyzes option_quotes to find credit spreads and debit calls
+ */
+app.get('/', async (c) => {
+  const db = c.env.DB;
+  
+  if (!db) {
+    return c.json({ error: 'Database not configured' }, 500);
+  }
+
+  try {
+    // 1) Get account equity for sizing (fallback to $100k)
+    let equity = 100000;
+    try {
+      if (c.env.IBKR_BROKER_BASE) {
+        const acctRes = await fetch(`${c.env.IBKR_BROKER_BASE}/account`, {
+          headers: {
+            'cf-access-client-id': c.env.CF_ACCESS_CLIENT_ID || '',
+            'cf-access-client-secret': c.env.CF_ACCESS_CLIENT_SECRET || ''
+          }
+        });
+        if (acctRes.ok) {
+          const account = await acctRes.json();
+          equity = Math.max(100000, Number(account?.equity) || 100000);
+        }
+      }
+    } catch (err) {
+      console.log('Using fallback equity:', equity);
+    }
+
+    // 2) Get symbols that have option quotes
+    const { results: symbolRows } = await db
+      .prepare(
+        `SELECT DISTINCT symbol FROM option_quotes 
+         WHERE timestamp > ? 
+         ORDER BY symbol`
+      )
+      .bind(Date.now() - 3600000) // Last hour
+      .all();
+
+    const symbols = symbolRows.map((r: any) => r.symbol);
+    
+    if (symbols.length === 0) {
+      return c.json({ 
+        timestamp: Date.now(),
+        count: 0, 
+        candidates: [],
+        message: 'No option quotes available. Seed data or wait for market hours.'
+      });
+    }
+
+    const candidates: any[] = [];
+    const debugInfo: any[] = [];
+
+    // 3) Process each symbol
+    for (const symbol of symbols) {
+      // 3a) Load IV history for IV Rank
+      const { results: ivRows } = await db
+        .prepare(
+          `SELECT iv FROM iv_history 
+           WHERE symbol = ? 
+           ORDER BY timestamp DESC LIMIT 60`
+        )
+        .bind(symbol)
+        .all();
+
+      const ivSamples = ivRows.map((r: any) => r.iv).filter((x: any) => x != null);
+      const ivr = ivRank(ivSamples); // May be null
+
+      // 3b) Get option quotes for this symbol
+      const { results: quotes } = await db
+        .prepare(
+          `SELECT * FROM option_quotes 
+           WHERE symbol = ? AND timestamp > ?
+           ORDER BY expiry, strike, right`
+        )
+        .bind(symbol, Date.now() - 3600000)
+        .all();
+
+      if (quotes.length === 0) continue;
+
+      // Get unique expiries
+      const expiries = Array.from(new Set(quotes.map((q: any) => q.expiry)));
+      
+      // Calculate DTE for each expiry
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const expiriesWithDTE = expiries.map(exp => {
+        const expDate = new Date(exp);
+        expDate.setHours(0, 0, 0, 0);
+        const dte = Math.round((+expDate - +today) / 86400000);
+        return { expiry: exp, dte };
+      });
+
+      // Find expiry for credit spread (30-45 DTE)
+      const creditExpiry = expiriesWithDTE
+        .filter(e => e.dte >= CREDIT.DTE_MIN && e.dte <= CREDIT.DTE_MAX)
+        .sort((a, b) => Math.abs(a.dte - 37.5) - Math.abs(b.dte - 37.5))[0];
+
+      // Find expiry for debit call (30-60 DTE)
+      const debitExpiry = expiriesWithDTE
+        .filter(e => e.dte >= DEBIT.DTE_MIN && e.dte <= DEBIT.DTE_MAX)
+        .sort((a, b) => Math.abs(a.dte - 45) - Math.abs(b.dte - 45))[0];
+
+      // 4A) BULL PUT CREDIT SPREAD
+      if (creditExpiry) {
+        // Get all puts for this expiry
+        const allPuts = quotes.filter((q: any) => 
+          q.expiry === creditExpiry.expiry && 
+          q.right === 'P' && 
+          q.delta != null
+        );
+
+        // Filter SHORT puts by delta range
+        const shortPutCandidates = allPuts.filter((q: any) =>
+          q.delta >= CREDIT.DELTA_MIN && 
+          q.delta <= CREDIT.DELTA_MAX
+        );
+
+        // Sort by closest to -0.25 delta
+        shortPutCandidates.sort((a: any, b: any) => 
+          Math.abs(-0.25 - a.delta) - Math.abs(-0.25 - b.delta)
+        );
+
+        const shortPut = shortPutCandidates[0];
+        
+        if (shortPut) {
+          // Find long put (WIDTH lower, no delta filtering)
+          const targetStrike = shortPut.strike - CREDIT.WIDTH;
+          const longPut = allPuts.find((q: any) => 
+            Math.abs(q.strike - targetStrike) < 0.01
+          );
+
+          if (longPut) {
+            const shortMid = shortPut.mid ?? mid(shortPut.bid, shortPut.ask, null);
+            const longMid = longPut.mid ?? mid(longPut.bid, longPut.ask, null);
+            
+            if (shortMid && longMid) {
+              const credit = shortMid - longMid;
+              const spreadPctShort = pctBidAsk(shortPut.bid, shortPut.ask);
+              const spreadPctLong = pctBidAsk(longPut.bid, longPut.ask);
+              const maxSpread = Math.max(spreadPctShort, spreadPctLong);
+
+              const width = CREDIT.WIDTH;
+              const maxLoss = (width - credit) * 100; // Per spread
+              const rr = credit > 0 ? maxLoss / (credit * 100) : null;
+              const pop = shortPut.delta ? (1 - Math.abs(shortPut.delta)) * 100 : null;
+
+              // Check eligibility
+              const minCredit = CREDIT.MIN_CREDIT_FRAC * width;
+              
+              if (
+                credit >= minCredit && 
+                maxSpread <= CREDIT.MAX_SPREAD_PCT && 
+                maxLoss > 0
+              ) {
+                // Position sizing
+                const riskBudget = RISK.FRACTION * equity;
+                let qty = Math.floor(riskBudget / maxLoss);
+                qty = Math.max(1, Math.min(qty, RISK.MAX_QTY));
+                
+                const notional = maxLoss * qty;
+                
+                if (notional <= RISK.MAX_NOTIONAL) {
+                  // Calculate score
+                  const ivrScore = ivr != null ? ivr / 2 : 25;
+                  const popScore = (pop ?? 50) / 2;
+                  const score = ivrScore + popScore;
+
+                  candidates.push({
+                    symbol,
+                    strategy: 'BULL_PUT_CREDIT_SPREAD',
+                    action: 'SELL',
+                    entry_type: 'CREDIT_SPREAD',
+                    legs: [
+                      {
+                        side: 'SELL',
+                        type: 'PUT',
+                        expiry: creditExpiry.expiry,
+                        strike: shortPut.strike,
+                        price: +(shortMid.toFixed(2))
+                      },
+                      {
+                        side: 'BUY',
+                        type: 'PUT',
+                        expiry: creditExpiry.expiry,
+                        strike: longPut.strike,
+                        price: +(longMid.toFixed(2))
+                      }
+                    ],
+                    qty,
+                    credit: +credit.toFixed(2),
+                    width,
+                    maxLoss: +maxLoss.toFixed(2),
+                    rr: rr ? +rr.toFixed(2) : null,
+                    pop: pop ? +pop.toFixed(1) : null,
+                    ivr: ivr != null ? +ivr.toFixed(1) : null,
+                    dte: creditExpiry.dte,
+                    rationale: `Delta≈${shortPut.delta?.toFixed(2)} | IVR=${ivr != null ? ivr.toFixed(0) : 'n/a'} | Spread%<=${CREDIT.MAX_SPREAD_PCT}%`,
+                    score: +score.toFixed(1)
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // 4B) LONG CALL DEBIT MOMENTUM
+      if (debitExpiry) {
+        // Only consider if IVR is acceptable for buying
+        const okIvr = ivr == null || ivr <= DEBIT.MAX_IVR;
+        
+        if (okIvr) {
+          const calls = quotes.filter((q: any) => 
+            q.expiry === debitExpiry.expiry && 
+            q.right === 'C' && 
+            q.delta != null && 
+            q.delta >= DEBIT.DELTA_MIN && 
+            q.delta <= DEBIT.DELTA_MAX
+          );
+
+          // Sort by closest to 0.65 delta
+          calls.sort((a: any, b: any) => 
+            Math.abs(0.65 - a.delta) - Math.abs(0.65 - b.delta)
+          );
+
+          const longCall = calls[0];
+          
+          if (longCall) {
+            const price = longCall.mid ?? mid(longCall.bid, longCall.ask, null);
+            const spreadPct = pctBidAsk(longCall.bid, longCall.ask);
+
+            if (price && spreadPct <= DEBIT.MAX_SPREAD_PCT) {
+              const perContractRisk = price * 100;
+              const riskBudget = RISK.FRACTION * equity;
+              
+              let qty = Math.floor(riskBudget / perContractRisk);
+              qty = Math.max(1, Math.min(qty, RISK.MAX_QTY));
+              
+              const notional = perContractRisk * qty;
+              
+              if (notional <= RISK.MAX_NOTIONAL) {
+                // Calculate score: (100 - IVR)/2 + momentum/2
+                // Lower IV is better for buying calls
+                const ivrScore = ivr != null ? (100 - ivr) / 2 : 32.5;
+                
+                // Momentum score: placeholder for now (would be based on price action)
+                // For now, use delta as proxy - higher delta (>0.6) suggests momentum
+                const momentumScore = longCall.delta >= 0.65 ? 25 : 20;
+                
+                const score = ivrScore + momentumScore;
+
+                candidates.push({
+                  symbol,
+                  strategy: 'LONG_CALL_MOMENTUM',
+                  action: 'BUY',
+                  entry_type: 'DEBIT_CALL',
+                  legs: [
+                    {
+                      side: 'BUY',
+                      type: 'CALL',
+                      expiry: debitExpiry.expiry,
+                      strike: longCall.strike,
+                      price: +price.toFixed(2)
+                    }
+                  ],
+                  qty,
+                  debit: +price.toFixed(2),
+                  maxLoss: +perContractRisk.toFixed(2),
+                  rr: 1.0, // Unlimited upside, defined risk
+                  pop: null,
+                  ivr: ivr != null ? +ivr.toFixed(1) : null,
+                  dte: debitExpiry.dte,
+                  rationale: `Delta≈${longCall.delta?.toFixed(2)} | IVR<=${DEBIT.MAX_IVR}% | Spread%<=${DEBIT.MAX_SPREAD_PCT}%`,
+                  score: +score.toFixed(1)
+                });
+              }
+            }
+          }
+        }
+      }
+      
+      // Debug: Record processing info
+      const allCreditPuts = creditExpiry ? quotes.filter((q: any) => 
+        q.expiry === creditExpiry.expiry && 
+        q.right === 'P' && 
+        q.delta != null
+      ) : [];
+      
+      const creditPuts = allCreditPuts.filter((q: any) =>
+        q.delta >= CREDIT.DELTA_MIN && 
+        q.delta <= CREDIT.DELTA_MAX
+      );
+      
+      debugInfo.push({
+        symbol,
+        ivSamples: ivSamples.length,
+        ivr,
+        quotesFound: quotes.length,
+        expiries: expiriesWithDTE.map(e => ({ expiry: e.expiry, dte: e.dte })),
+        creditExpiry: creditExpiry ? { expiry: creditExpiry.expiry, dte: creditExpiry.dte } : null,
+        debitExpiry: debitExpiry ? { expiry: debitExpiry.expiry, dte: debitExpiry.dte } : null,
+        creditPutsFound: creditPuts.length,
+        allQuotes: quotes.map((q: any) => ({
+          expiry: q.expiry,
+          strike: q.strike,
+          right: q.right,
+          delta: q.delta,
+          bid: q.bid,
+          ask: q.ask
+        }))
+      });
+    }
+
+    // 5) Sort by score and return top 10
+    candidates.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+    
+    return c.json({
+      timestamp: Date.now(),
+      count: candidates.length,
+      candidates: candidates.slice(0, 10),
+      equity,
+      symbols_analyzed: symbols.length,
+      debug: {
+        symbols,
+        quote_cutoff: Date.now() - 3600000,
+        processing: debugInfo
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Strategy run error:', error);
+    return c.json({ 
+      error: 'Strategy evaluation failed', 
+      message: error.message 
+    }, 500);
+  }
+});
+
+export default app;
+
