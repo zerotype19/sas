@@ -17,6 +17,7 @@
 import type { StrategyInput, StrategyOutput, Proposal, ProposalLeg, OptionQuote } from '../types';
 import { creditSpreadExits, calculatePositionSize } from '../exits/rules';
 import { CREDIT_SPREAD_THRESHOLDS, RISK_LIMITS } from '../config/thresholds';
+import { scoreIvrvEdge } from '../scoring/factors';
 
 const CONFIG = {
   DTE_MIN: 30,
@@ -127,10 +128,20 @@ export function generate(input: StrategyInput): StrategyOutput {
   const rr = maxLoss > 0 ? (credit * 100) / maxLoss : null;
   const pop = shortPut.delta ? (1 - Math.abs(shortPut.delta)) * 100 : null;
   
-  // Calculate score: IVR/2 + POP/2
+  // Calculate score with optional IV/RV edge
+  const useIvrvEdge = input.env?.ENABLE_IVRV_EDGE === 'true';
   const ivrScore = input.ivRank !== null ? input.ivRank / 2 : 25;
   const popScore = pop !== null ? pop / 2 : 25;
-  const score = ivrScore + popScore;
+  
+  let score: number;
+  if (useIvrvEdge && input.ivrvMetrics) {
+    // With IV/RV edge: IVR 40% + POP 35% + Edge 25%
+    const ivrvEdgeScore = scoreIvrvEdge(input.ivrvMetrics.put_skew_ivrv_spread, false); // false = credit strategy
+    score = (ivrScore * 0.80) + (popScore * 0.70) + (ivrvEdgeScore * 0.25);
+  } else {
+    // Legacy scoring: IVR 50% + POP 50%
+    score = ivrScore + popScore;
+  }
   
   // Create proposal
   const legs: ProposalLeg[] = [

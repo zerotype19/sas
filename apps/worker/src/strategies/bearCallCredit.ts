@@ -19,7 +19,7 @@
  */
 
 import type { StrategyInput, StrategyOutput, Proposal, ProposalLeg, OptionQuote } from '../types';
-import { scoreDeltaWindow, scoreIvr, scoreTrendBias, scoreLiquidity, scoreRR, scoreDTE, popFromShortDelta } from '../scoring/factors';
+import { scoreDeltaWindow, scoreIvr, scoreTrendBias, scoreLiquidity, scoreRR, scoreDTE, popFromShortDelta, scoreIvrvEdge } from '../scoring/factors';
 import { weighted } from '../scoring/compose';
 import { blockForEarnings } from '../filters/events';
 import { creditSpreadExits, calculatePositionSize } from '../exits/rules';
@@ -148,14 +148,28 @@ export function generate(input: StrategyInput): StrategyOutput {
     
     const dteScore = scoreDTE(dte, [CONFIG.DTE_MIN, CONFIG.DTE_MAX]);
     
-    // Compose final score
-    const score = weighted()
-      .add('delta', deltaScore, 0.30)
-      .add('ivr', ivrScore, 0.25)
-      .add('liquidity', liquidityScore, 0.15)
-      .add('rr', rrScore, 0.15)
-      .add('trend', trendScore, 0.15)
-      .compute();
+    // Compose final score (with optional IV/RV edge)
+    const useIvrvEdge = input.env?.ENABLE_IVRV_EDGE === 'true';
+    const ivrvEdgeScore = useIvrvEdge && input.ivrvMetrics
+      ? scoreIvrvEdge(input.ivrvMetrics.call_skew_ivrv_spread, false) // false = credit strategy
+      : 50;
+    
+    const score = useIvrvEdge && input.ivrvMetrics
+      ? weighted()
+          .add('delta', deltaScore, 0.25)
+          .add('ivr', ivrScore, 0.20)
+          .add('ivrv_edge', ivrvEdgeScore, 0.30)
+          .add('liquidity', liquidityScore, 0.10)
+          .add('rr', rrScore, 0.10)
+          .add('trend', trendScore, 0.05)
+          .compute()
+      : weighted()
+          .add('delta', deltaScore, 0.30)
+          .add('ivr', ivrScore, 0.25)
+          .add('liquidity', liquidityScore, 0.15)
+          .add('rr', rrScore, 0.15)
+          .add('trend', trendScore, 0.15)
+          .compute();
     
     // Create proposal
     const legs: ProposalLeg[] = [
