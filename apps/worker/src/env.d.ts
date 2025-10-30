@@ -29,6 +29,10 @@ export type Bindings = {
   
   // Worker URLs
   WORKER_BASE_URL?: string;
+  
+  // Feature flags
+  ENABLE_IVRV_EDGE?: string;  // 'true' | 'false'
+  SAS_PHASE?: string;         // '1' | '2' | '3'
 };
 
 export type Env = {

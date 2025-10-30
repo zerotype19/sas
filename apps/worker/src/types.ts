@@ -84,6 +84,22 @@ export interface OptionChain {
 // Trend analysis
 export type TrendDirection = 'UP' | 'DOWN' | 'NEUTRAL';
 
+// IV/RV metrics (from analytics module)
+export interface IvrvMetrics {
+  rv20: number;
+  atm_iv?: number;
+  atm_ivrv_ratio?: number;
+  iv_premium_atm_pct?: number;
+  otm_call_iv?: number;
+  otm_call_ivrv_ratio?: number;
+  iv_premium_otm_call_pct?: number;
+  otm_put_iv?: number;
+  otm_put_ivrv_ratio?: number;
+  iv_premium_otm_put_pct?: number;
+  call_skew_ivrv_spread?: number;
+  put_skew_ivrv_spread?: number;
+}
+
 // Strategy input
 export interface StrategyInput {
   symbol: string;
@@ -95,6 +111,8 @@ export interface StrategyInput {
   todayISO: string;
   equity: number;
   termSkew?: { frontIV: number; backIV: number }; // For calendar spreads
+  ivrvMetrics?: IvrvMetrics; // IV/RV analytics
+  env?: any; // Worker environment for phase gating
 }
 
 // Strategy output

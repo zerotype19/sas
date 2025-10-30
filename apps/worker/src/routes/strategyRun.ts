@@ -15,6 +15,9 @@ import type { Bindings } from '../env';
 import { ivRank } from '../utils/options';
 import { STRATEGIES, isStrategyAllowed } from '../config/strategies';
 import type { StrategyInput, Proposal, OptionChain, TrendDirection } from '../types';
+import { getDailyCloses } from '../data/history';
+import { calcRV20 } from '../analytics/realizedVol';
+import { calcIvrvMetrics } from '../analytics/ivrv';
 
 // Import all strategy modules
 import * as longCall from '../strategies/longCall';
@@ -247,6 +250,63 @@ async function buildStrategyInput(
   // Today ISO
   const todayISO = new Date().toISOString().split('T')[0];
 
+  // Calculate IV/RV metrics
+  let ivrvMetrics = undefined;
+  try {
+    const brokerBase = env.IBKR_BROKER_BASE || 'http://127.0.0.1:8081';
+    const headers: Record<string, string> = {
+      'content-type': 'application/json'
+    };
+
+    // Add CF Access headers if configured
+    if (env.CF_ACCESS_CLIENT_ID && env.CF_ACCESS_CLIENT_SECRET) {
+      headers['cf-access-client-id'] = env.CF_ACCESS_CLIENT_ID;
+      headers['cf-access-client-secret'] = env.CF_ACCESS_CLIENT_SECRET;
+    }
+
+    // Fetch 60 days of closing prices
+    const closes = await getDailyCloses(symbol, 60, brokerBase, headers);
+
+    if (closes.length >= 21) {
+      // Calculate RV20
+      const rv20 = calcRV20(closes);
+
+      // Calculate IV/RV metrics from option chain
+      const metrics = calcIvrvMetrics({ chain, rv20 });
+
+      // Persist to D1
+      await db.prepare(`
+        INSERT OR REPLACE INTO volatility_metrics (
+          symbol, asof_date, expiry, rv20,
+          atm_iv, otm_call_iv, otm_put_iv,
+          atm_ivrv_ratio, otm_call_ivrv_ratio, otm_put_ivrv_ratio,
+          iv_premium_atm_pct, iv_premium_otm_call_pct, iv_premium_otm_put_pct,
+          call_skew_ivrv_spread, put_skew_ivrv_spread
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        symbol,
+        todayISO,
+        expiries[0], // Front month
+        metrics.rv20,
+        metrics.atm_iv,
+        metrics.otm_call_iv,
+        metrics.otm_put_iv,
+        metrics.atm_ivrv_ratio,
+        metrics.otm_call_ivrv_ratio,
+        metrics.otm_put_ivrv_ratio,
+        metrics.iv_premium_atm_pct,
+        metrics.iv_premium_otm_call_pct,
+        metrics.iv_premium_otm_put_pct,
+        metrics.call_skew_ivrv_spread,
+        metrics.put_skew_ivrv_spread
+      ).run();
+
+      ivrvMetrics = metrics;
+    }
+  } catch (err: any) {
+    console.log(`IV/RV metrics unavailable for ${symbol}:`, err.message);
+  }
+
   return {
     symbol,
     chain,
@@ -257,6 +317,8 @@ async function buildStrategyInput(
     todayISO,
     equity,
     termSkew,
+    ivrvMetrics,
+    env, // Pass env for phase gating
   };
 }
 
