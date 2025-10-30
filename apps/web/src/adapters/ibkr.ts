@@ -1,7 +1,18 @@
 // IBKR Broker Adapter
 // Client-side adapter for calling IBKR broker endpoints via Worker proxy
 
-const BASE = '/api/broker';
+const PAGES_BASE = '/api/broker';
+const WORKER_BASE = 'https://sas-worker-production.kevin-mcgovern.workers.dev/broker';
+
+async function fetchWithFallback(input: RequestInfo, init?: RequestInit): Promise<Response> {
+  try {
+    const res = await fetch(input, init);
+    if (res.ok) return res;
+  } catch (_) {}
+  // Fallback to Worker directly when Pages proxy misbehaves
+  const url = typeof input === 'string' ? input : input.toString();
+  return fetch(url.replace(PAGES_BASE, WORKER_BASE), init);
+}
 
 export interface Quote {
   symbol: string;
@@ -76,7 +87,7 @@ export interface AccountSummary {
  * Get real-time quote for a symbol
  */
 export async function getQuote(symbol: string, exchange = 'SMART'): Promise<Quote> {
-  const response = await fetch(`${BASE}/quote`, {
+  const response = await fetchWithFallback(`${PAGES_BASE}/quote`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ symbol, exchange })
@@ -94,7 +105,7 @@ export async function getQuote(symbol: string, exchange = 'SMART'): Promise<Quot
  * Get option chain for a symbol
  */
 export async function getOptionChain(request: OptionChainRequest): Promise<OptionChainItem[]> {
-  const response = await fetch(`${BASE}/optionChain`, {
+  const response = await fetchWithFallback(`${PAGES_BASE}/optionChain`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request)
@@ -112,7 +123,7 @@ export async function getOptionChain(request: OptionChainRequest): Promise<Optio
  * Place an order
  */
 export async function placeOrder(request: PlaceOrderRequest): Promise<OrderResponse> {
-  const response = await fetch(`${BASE}/placeOrder`, {
+  const response = await fetchWithFallback(`${PAGES_BASE}/placeOrder`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request)
@@ -131,7 +142,7 @@ export async function placeOrder(request: PlaceOrderRequest): Promise<OrderRespo
  */
 export async function getPositions(): Promise<Position[]> {
   try {
-    const response = await fetch(`${BASE}/positions`);
+    const response = await fetchWithFallback(`${PAGES_BASE}/positions`);
     if (!response.ok) return [];
     const data = await response.json();
     return Array.isArray(data) ? data : (data.positions ?? []);
@@ -144,7 +155,7 @@ export async function getPositions(): Promise<Position[]> {
  * Get account summary
  */
 export async function getAccount(): Promise<AccountSummary> {
-  const response = await fetch(`${BASE}/account`);
+  const response = await fetchWithFallback(`${PAGES_BASE}/account`);
   
   if (!response.ok) {
     const error = await response.text();
