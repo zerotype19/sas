@@ -22,7 +22,7 @@
  */
 
 import type { StrategyInput, StrategyOutput, Proposal, ProposalLeg, OptionQuote } from '../types';
-import { scoreDeltaWindow, scoreIvr, scoreTrendBias, scoreLiquidity, scoreRR, scoreDTE, popFromShortDelta } from '../scoring/factors';
+import { scoreDeltaWindow, scoreIvr, scoreTrendBias, scoreLiquidity, scoreRR, scoreDTE, popFromShortDelta, scoreIvrvEdge } from '../scoring/factors';
 import { weighted } from '../scoring/compose';
 import { blockForEarnings } from '../filters/events';
 import { condorExits, calculatePositionSize } from '../exits/rules';
@@ -150,14 +150,30 @@ export function generate(input: StrategyInput): StrategyOutput {
     
     const dteScore = scoreDTE(dte, [CONFIG.DTE_MIN, CONFIG.DTE_MAX]);
     
-    // Compose final score
-    const score = weighted()
-      .add('symmetry', symmetryScore, 0.20)
-      .add('ivr', ivrScore, 0.25)
-      .add('liquidity', liquidityScore, 0.20)
-      .add('rr', rrScore, 0.15)
-      .add('trend', trendFinal, 0.20)
-      .compute();
+    // Compose final score with optional IV/RV edge
+    const useIvrv = input?.env?.ENABLE_IVRV_EDGE === 'true';
+    const callSkew = input.ivrvMetrics?.call_skew_ivrv_spread ?? 0;
+    const putSkew  = input.ivrvMetrics?.put_skew_ivrv_spread  ?? 0;
+    
+    // Average both sides to capture "balanced richness" (both credit sides)
+    const avgSkew  = (callSkew + putSkew) / 2;
+    const edgeScore = useIvrv ? scoreIvrvEdge(avgSkew, false) : 50; // false = credit strategy
+    
+    const score = useIvrv
+      ? weighted()
+          .add('symmetry', symmetryScore, 0.20)
+          .add('ivr', ivrScore, 0.20)
+          .add('ivrv_edge', edgeScore, 0.25)
+          .add('liquidity', liquidityScore, 0.20)
+          .add('rr', rrScore, 0.15)
+          .compute()
+      : weighted()
+          .add('symmetry', symmetryScore, 0.20)
+          .add('ivr', ivrScore, 0.25)
+          .add('liquidity', liquidityScore, 0.20)
+          .add('rr', rrScore, 0.15)
+          .add('trend', trendFinal, 0.20)
+          .compute();
     
     // Create proposal with 4 legs
     const legs: ProposalLeg[] = [

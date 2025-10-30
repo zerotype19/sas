@@ -172,3 +172,32 @@ export function scoreIvrvEdge(spread: number | undefined, preferLow = false): nu
   }
 }
 
+/**
+ * Score IV/RV edge for DEBIT BUYERS (long call/put)
+ * 
+ * Debit buyers prefer LOW or NEGATIVE IV/RV skew spreads.
+ * - spread <= -0.25 → 100 points (deeply cheap)
+ * - spread = 0 → 50 points (neutral)
+ * - spread >= 0.25 → 0 points (expensive)
+ * 
+ * Linear interpolation between thresholds.
+ * 
+ * @param spread - IV/RV skew spread (OTM vs ATM)
+ * @returns Score from 0-100
+ */
+export function scoreIvrvBuyEdge(spread: number | undefined): number {
+  if (spread == null) return 50; // Neutral when unavailable
+  
+  if (spread <= -0.25) return 100; // Deeply cheap options
+  if (spread >= 0.25) return 0;    // Expensive options
+  
+  // Linear mapping from [-0.25, 0.25] to [100, 0]
+  if (spread < 0) {
+    // Negative spread: map [-0.25, 0] to [100, 50]
+    return 50 + Math.round((Math.abs(spread) / 0.25) * 50);
+  }
+  
+  // Positive spread: map [0, 0.25] to [50, 0]
+  return Math.max(0, 50 - Math.round((spread / 0.25) * 50));
+}
+

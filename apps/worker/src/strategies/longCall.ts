@@ -15,6 +15,8 @@
 
 import type { StrategyInput, StrategyOutput, Proposal, ProposalLeg, OptionQuote } from '../types';
 import { debitExits, calculatePositionSize } from '../exits/rules';
+import { scoreIvrvBuyEdge } from '../scoring/factors';
+import { weighted } from '../scoring/compose';
 
 const CONFIG = {
   DTE_MIN: 30,
@@ -102,14 +104,34 @@ export function generate(input: StrategyInput): StrategyOutput {
   // Calculate exits
   const exits = debitExits(price);
   
-  // Calculate score: (100 - IVR)/2 + momentum/2
-  // Lower IV is better for buying calls
-  const ivrScore = input.ivRank !== null ? (100 - input.ivRank) / 2 : 32.5;
+  // Calculate score with optional IV/RV buy edge
+  const useIvrv = input?.env?.ENABLE_IVRV_EDGE === 'true';
+  const callSkew = input.ivrvMetrics?.call_skew_ivrv_spread;
+  const edgeScore = useIvrv ? scoreIvrvBuyEdge(callSkew) : 50;
   
-  // Momentum score: use delta as proxy
-  const momentumScore = longCall.delta! >= 0.65 ? 25 : 20;
+  // IVR penalty score: Lower IV is better for buying calls
+  const ivrPenaltyScore = input.ivRank !== null ? (100 - input.ivRank) : 65;
   
-  const score = ivrScore + momentumScore;
+  // Momentum score: use delta as proxy (higher delta = more bullish)
+  const momentumScore = longCall.delta! >= 0.65 ? 50 : 40;
+  
+  // Liquidity score: tighter spreads are better
+  const spread = getSpreadPercent(longCall);
+  const liquidityScore = spread <= 10 ? 100 : spread <= 20 ? 50 : 0;
+  
+  // Compose score with optional IV/RV edge
+  const score = useIvrv
+    ? weighted()
+        .add('momentum', momentumScore, 0.45)
+        .add('ivr_penalty', ivrPenaltyScore, 0.25)
+        .add('ivrv_buy_edge', edgeScore, 0.20)
+        .add('liquidity', liquidityScore, 0.10)
+        .compute()
+    : weighted()
+        .add('momentum', momentumScore, 0.50)
+        .add('ivr_penalty', ivrPenaltyScore, 0.30)
+        .add('liquidity', liquidityScore, 0.20)
+        .compute();
   
   // Create proposal
   const leg: ProposalLeg = {

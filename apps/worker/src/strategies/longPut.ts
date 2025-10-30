@@ -18,7 +18,7 @@
  */
 
 import type { StrategyInput, StrategyOutput, Proposal, ProposalLeg, OptionQuote } from '../types';
-import { scoreDeltaWindow, scoreIvr, scoreTrendBias, scoreLiquidity, scoreRR, scoreDTE } from '../scoring/factors';
+import { scoreDeltaWindow, scoreIvr, scoreTrendBias, scoreLiquidity, scoreRR, scoreDTE, scoreIvrvBuyEdge } from '../scoring/factors';
 import { weighted } from '../scoring/compose';
 import { blockForEarnings } from '../filters/events';
 import { debitExits, calculatePositionSize } from '../exits/rules';
@@ -124,14 +124,25 @@ export function generate(input: StrategyInput): StrategyOutput {
     
     const dteScore = scoreDTE(dte, [CONFIG.DTE_MIN, CONFIG.DTE_MAX]);
     
-    // Compose final score
-    const score = weighted()
-      .add('delta', deltaScore, 0.35)
-      .add('trend', trendScore, 0.30)
-      .add('ivr', ivrScore, 0.15)
-      .add('liquidity', liquidityScore, 0.10)
-      .add('rr', rrScore, 0.10)
-      .compute();
+    // Compose final score with optional IV/RV buy edge
+    const useIvrv = input?.env?.ENABLE_IVRV_EDGE === 'true';
+    const putSkew = input.ivrvMetrics?.put_skew_ivrv_spread;
+    const edgeScore = useIvrv ? scoreIvrvBuyEdge(putSkew) : 50;
+    
+    const score = useIvrv
+      ? weighted()
+          .add('trend', trendScore, 0.40)
+          .add('ivr', ivrScore, 0.25)
+          .add('ivrv_buy_edge', edgeScore, 0.20)
+          .add('liquidity', liquidityScore, 0.15)
+          .compute()
+      : weighted()
+          .add('delta', deltaScore, 0.35)
+          .add('trend', trendScore, 0.30)
+          .add('ivr', ivrScore, 0.15)
+          .add('liquidity', liquidityScore, 0.10)
+          .add('rr', rrScore, 0.10)
+          .compute();
     
     // Create proposal
     const leg: ProposalLeg = {
