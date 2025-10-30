@@ -1,213 +1,202 @@
-# 🚀 SAS Deployment Status
+# Deployment Status - IV/RV Analytics
 
-## ✅ DEPLOYED & READY
-
-### Production Services
-
-| Service | Status | URL |
-|---------|--------|-----|
-| **Worker API** | ✅ Live | https://sas-worker.kevin-mcgovern.workers.dev |
-| **Web UI** | ✅ Live | https://sas-web.pages.dev |
-| **D1 Database** | ✅ Active | `sas_db` (aece1fa6-165f-4806-aac9-572fd18d5a23) |
-| **KV Store** | ✅ Active | 7d4aaca5d0ef46169115301b510fab6d |
-| **Queue** | ✅ Active | `sas-ingest` |
-| **Telegram Bot** | ✅ Active | Chat ID: -1003136885221 |
-
-### IBKR Integration
-
-| Component | Status | Notes |
-|-----------|--------|-------|
-| **Broker Routes** | ✅ Deployed | `/broker/*` endpoints live |
-| **Microservice** | ⏳ Ready | Run `bash setup.sh` when IB Gateway ready |
-| **Web Adapter** | ✅ Ready | `apps/web/src/adapters/ibkr.ts` |
-| **Guardrails** | ✅ Active | Max qty: 100, Max notional: $50k |
+**Date:** October 30, 2024, 3:42 PM EST  
+**Status:** ⚠️ Worker Deployed - Broker Connection Needed
 
 ---
 
-## 🎯 What's Working Right Now
+## ✅ COMPLETED
 
-### Core SAS System ✅
-- ✓ Signal ingestion (Xynth webhook)
-- ✓ SAS rules engine (skew, IV-RV filtering)
-- ✓ Proposal generation
-- ✓ Risk guardrails (5 position limit, 20% equity cap)
-- ✓ Position tracking
-- ✓ Scheduled cron (3x/day mark-to-market)
-- ✓ Telegram alerts (proposals, approvals, TP/SL/TimeStop)
-- ✓ Web UI (dashboard, proposals, positions)
+### 1. Git & Merge
+- ✅ Merged `feat/ivrv-metrics` to `main`
+- ✅ 4 commits with full IV/RV implementation
+- ✅ All 79 tests passing
 
-### IBKR Integration ✅
-- ✓ Worker proxy routes deployed
-- ✓ Order guardrails enforced
-- ✓ Paper trading mode flag set
-- ✓ Type-safe broker interfaces
-- ✓ Client adapter ready for UI
+### 2. D1 Migration
+- ✅ `volatility_metrics` table created in production
+- ✅ Schema includes RV20, IV/RV ratios, skew spreads
+- ✅ Index on `symbol, asof_date` for fast queries
 
----
-
-## 📊 Active Resources
-
-**Cloudflare:**
-- Account: kevin.mcgovern@gmail.com (315111a87fcb293ac0efd819b6e59147)
-- Worker: `sas-worker` (Version: 5a6b7218-538d-4d93-a835-7524c535e48d)
-- Pages: `sas-web` (https://310a2050.sas-web.pages.dev)
-- D1: `sas_db` (86 KB, 5 tables)
-- KV: Deduplication & cooldowns
-- Queue: Signal processing
-
-**Database State:**
-- Signals: 3 stored
-- Proposals: 2 pending
-- Positions: 2 open (TSLA, AAPL)
-- PnL marks: Available
-
-**Configuration:**
-```toml
-TRADING_MODE = "paper"
-IBKR_BROKER_BASE = "http://127.0.0.1:8081"
-RISK_MAX_POSITIONS = "5"
-ACCOUNT_EQUITY = "100000"
-```
+### 3. Worker Deployment
+- ✅ Deployed to production: `https://sas-worker-production.kevin-mcgovern.workers.dev`
+- ✅ Health endpoint responding: `{"ok":true,"version":"1.0.0"}`
+- ✅ All environment variables configured
+- ✅ D1 binding active
+- ✅ SAS_PHASE=3 (all 7 strategies enabled)
 
 ---
 
-## 🚦 Next Steps to Go Live
+## ⚠️ BLOCKING ISSUE
 
-### Phase 1: Local Testing (5 minutes)
+### Mac Mini Broker Not Responding
 
-1. **Install IB Gateway**
-   - Download from Interactive Brokers
-   - Login with paper trading account
+**Problem:** Worker can't reach broker at `https://ibkr-broker.gekkoworks.com`
 
-2. **Start IBKR Service**
-   ```bash
-   cd services/ibkr-broker
-   bash setup.sh
-   bash run.sh
-   ```
+**Error:** Cloudflare Access authentication challenge
 
-3. **Run Tests**
-   ```bash
-   bash test.sh
-   ```
-
-### Phase 2: Production (Optional - No Laptop)
-
-1. **Setup VM** (Ubuntu)
-2. **Install IB Gateway** on VM
-3. **Deploy microservice** as systemd service
-4. **Create Cloudflare Tunnel**
-5. **Update wrangler.toml** with tunnel URL
-6. **Redeploy worker**
+**Root Cause:** One of:
+1. Mac mini broker service not running
+2. Cloudflare Tunnel not active
+3. CF Access credentials not working
 
 ---
 
-## 📱 API Endpoints
+## 🔧 NEXT STEPS TO UNBLOCK
 
-### SAS Core
-- `POST /ingest/xynth` - Ingest signal
-- `GET /review` - List proposals
-- `POST /act/approve` - Approve proposal
-- `POST /act/skip` - Skip proposal
-- `GET /positions` - List positions
-- `GET /positions/:id` - Position detail
+### Option A: Start Mac Mini Broker (MOCK Mode)
 
-### IBKR Broker
-- `GET /broker` - Health check ✅
-- `POST /broker/quote` - Get quote ✅
-- `POST /broker/optionChain` - Option chain ✅
-- `POST /broker/placeOrder` - Place order ✅
-- `GET /broker/positions` - Get positions ✅
-- `GET /broker/account` - Account summary ✅
-
----
-
-## 🧪 Quick Verification
+On your Mac mini, run:
 
 ```bash
-# Verify worker deployment
-curl https://sas-worker.kevin-mcgovern.workers.dev/broker
+# Navigate to broker directory
+cd ~/sas-ibkr-broker
 
-# Expected:
-# {"service":"IBKR Broker Proxy","brokerBase":"http://127.0.0.1:8081"}
+# Set environment variables
+export MARKET_DATA_MODE=mock
+export IB_CLIENT_ID=27
 
-# Check web UI
-open https://sas-web.pages.dev/proposals
+# Start the broker service
+nohup uvicorn app.main:app --host 127.0.0.1 --port 8081 \
+  > broker.out.log 2> broker.err.log &
 
-# Check Telegram
-# Send test signal and watch for alert
+# Verify it started
+curl http://127.0.0.1:8081/health
+```
+
+**Expected:** `{"ok":true,"ib_connected":...}`
+
+### Option B: Check Cloudflare Tunnel
+
+```bash
+# On Mac mini, check if cloudflared is running
+ps aux | grep cloudflared
+
+# If not running, start it
+cloudflared tunnel run ibkr-broker
+
+# Or restart the launchd service
+launchctl unload ~/Library/LaunchAgents/com.cloudflare.ibkr-broker.plist
+launchctl load ~/Library/LaunchAgents/com.cloudflare.ibkr-broker.plist
+```
+
+### Option C: Test Direct Connection
+
+```bash
+# From any machine, test the tunnel
+curl -H "CF-Access-Client-Id: YOUR_CLIENT_ID" \
+     -H "CF-Access-Client-Secret: YOUR_SECRET" \
+     https://ibkr-broker.gekkoworks.com/health
+```
+
+If this works, the Worker's CF Access credentials might need to be re-set.
+
+---
+
+## 📋 ONCE BROKER IS RUNNING
+
+### 1. Force Market Data Ingestion
+
+```bash
+# This will populate option_quotes table
+curl -s "https://sas-worker-production.kevin-mcgovern.workers.dev/ingest/options" | jq
+```
+
+**Expected:** `{"ingested": 100+, "symbols": ["AAPL","MSFT"...]}`
+
+### 2. Run Strategy Engine
+
+```bash
+# This will compute IV/RV metrics and generate proposals
+curl -s "https://sas-worker-production.kevin-mcgovern.workers.dev/strategy/run?force=true" | jq '.count'
+```
+
+**Expected:** `10-50` (number of proposals)
+
+### 3. Verify Metrics in D1
+
+```bash
+wrangler d1 execute sas-proposals --env production --remote --command="
+SELECT symbol, asof_date, expiry,
+       ROUND(rv20,1) rv20,
+       ROUND(atm_ivrv_ratio,2) atm_ratio,
+       ROUND(call_skew_ivrv_spread,3) c_skew,
+       ROUND(put_skew_ivrv_spread,3)  p_skew
+FROM volatility_metrics
+ORDER BY created_at DESC LIMIT 12;"
+```
+
+**Expected:** Rows with non-null RV20, ratios, and skews
+
+### 4. Enable Feature Flag
+
+```bash
+wrangler secret put ENABLE_IVRV_EDGE --env production
+# Enter: true
+```
+
+### 5. Compare Scores
+
+```bash
+# Get proposals and check scores changed
+curl -s "https://sas-worker-production.kevin-mcgovern.workers.dev/proposals" \
+ | jq '[.proposals[] | {sym:.symbol,str:.strategy,score:.score,
+       cSkew:.meta.call_skew_ivrv_spread,
+       pSkew:.meta.put_skew_ivrv_spread}][0:20]'
 ```
 
 ---
 
-## 📈 System Metrics
+## 🎯 SUCCESS CRITERIA
 
-**Uptime:** Worker & Web UI 100%  
-**Cost:** $0/month (free tier)  
-**Latency:** <100ms (Worker), <50ms (Pages)  
-**Capacity:** 100k requests/day  
+Once broker is running, we should see:
 
-**Database:**
-- Size: 86 KB / 5 GB limit
-- Reads: ~1000 / 5M daily limit
-- Writes: ~100 / 1M daily limit
+1. ✅ Option quotes ingested into D1
+2. ✅ Volatility metrics populated with RV20 and IV/RV ratios
+3. ✅ Strategy run produces 10-50 proposals
+4. ✅ Proposals have non-null `ivrvMetrics` fields
+5. ✅ Scores shift when `ENABLE_IVRV_EDGE` is toggled
 
 ---
 
-## 🎉 Migration Complete
-
-**From:** Xynth-only signal processing  
-**To:** Full IBKR integration ready
-
-**What Changed:**
-- ✅ Added broker abstraction layer
-- ✅ IBKR microservice created
-- ✅ Worker proxy routes added
-- ✅ Web UI adapter ready
-- ✅ Guardrails enforced
-- ✅ Paper trading mode set
-
-**What Stayed:**
-- ✅ All existing SAS functionality
-- ✅ Telegram alerts
-- ✅ Risk management
-- ✅ Web UI
-- ✅ Database schema
-
----
-
-## 🔗 Quick Links
-
-- **Worker Dashboard:** https://dash.cloudflare.com/315111a87fcb293ac0efd819b6e59147/workers/services/view/sas-worker
-- **Pages Dashboard:** https://dash.cloudflare.com/315111a87fcb293ac0efd819b6e59147/pages/view/sas-web
-- **D1 Console:** https://dash.cloudflare.com/315111a87fcb293ac0efd819b6e59147/d1
-- **Broker Health:** https://sas-worker.kevin-mcgovern.workers.dev/broker
-- **Proposals UI:** https://sas-web.pages.dev/proposals
-- **Positions UI:** https://sas-web.pages.dev/positions
-
----
-
-## 📝 Files Ready
+## 📞 CURRENT STATE
 
 ```
-sas/
-├── services/ibkr-broker/
-│   ├── app/main.py          ✅ FastAPI service
-│   ├── setup.sh             ✅ Auto-setup + smoke test
-│   ├── run.sh               ✅ Start service
-│   └── test.sh              ✅ End-to-end tests
-├── apps/worker/
-│   ├── src/routes/ibkr.ts   ✅ Proxy routes
-│   └── wrangler.toml        ✅ IBKR config
-├── apps/web/
-│   └── src/adapters/ibkr.ts ✅ Client adapter
-└── packages/shared/
-    └── src/broker.ts        ✅ Type definitions
+┌─────────────────────────────────────────┐
+│ Component          │ Status             │
+├─────────────────────────────────────────┤
+│ Git (main branch)  │ ✅ Updated         │
+│ D1 Migration       │ ✅ Complete        │
+│ Worker Code        │ ✅ Deployed        │
+│ Worker Health      │ ✅ Responding      │
+│ D1 Binding         │ ✅ Connected       │
+│ Mac Mini Broker    │ ⚠️  Not Responding │
+│ Cloudflare Tunnel  │ ⚠️  Not Reachable  │
+│ Option Quotes      │ ⏸️  Pending Broker │
+│ IV/RV Metrics      │ ⏸️  Pending Data   │
+│ Feature Flag       │ ⏸️  Not Set (OFF)  │
+└─────────────────────────────────────────┘
 ```
 
 ---
 
-**Status:** Production ready, waiting for IB Gateway connection  
-**Last Updated:** 2025-10-29  
-**Next Action:** Run `bash services/ibkr-broker/setup.sh`
+## 💡 RECOMMENDED ACTION
 
+**Start the Mac mini broker in MOCK mode** to unblock testing:
+
+1. SSH to Mac mini
+2. Start broker service with `MARKET_DATA_MODE=mock`
+3. Verify tunnel is active
+4. Return to this guide and run "ONCE BROKER IS RUNNING" steps
+
+---
+
+## 📚 REFERENCE
+
+- **Worker URL:** https://sas-worker-production.kevin-mcgovern.workers.dev
+- **Broker URL:** https://ibkr-broker.gekkoworks.com
+- **Web UI:** https://sas-web.pages.dev
+- **D1 Database:** `sas-proposals` (4d5799a8-6d28-491b-8ae7-0e357079e63f)
+
+---
+
+**Next Step:** Start Mac mini broker, then continue with smoke tests! 🚀

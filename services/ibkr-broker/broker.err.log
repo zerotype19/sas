@@ -1,0 +1,273 @@
+INFO:     Started server process [19578]
+INFO:     Waiting for application startup.
+INFO:app.main:IBKR Broker Service starting...
+INFO:app.main:Connecting to IB Gateway at 127.0.0.1:7497 (client 27)...
+INFO:ib_insync.client:Connecting to 127.0.0.1:7497 with clientId 27...
+INFO:ib_insync.client:Connected
+INFO:ib_insync.client:Logged on to server version 176
+INFO:ib_insync.client:API connection ready
+INFO:ib_insync.wrapper:Warning 2104, reqId -1: Market data farm connection is OK:usfarm
+INFO:ib_insync.wrapper:Warning 2107, reqId -1: HMDS data farm connection is inactive but should be available upon demand.ushmds
+INFO:ib_insync.wrapper:Warning 2158, reqId -1: Sec-def data farm connection is OK:secdefil
+INFO:ib_insync.ib:Synchronization complete
+INFO:app.main:✓ Connected to IB Gateway successfully
+INFO:app.main:✓ Market data type: Delayed (3)
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8081 (Press CTRL+C to quit)
+INFO:app.main:MOCK mode: Generating 60 daily bars for AAPL
+INFO:app.main:MOCK mode: Generating 60 daily bars for AAPL
+INFO:app.main:MOCK mode: Generating 60 daily bars for AAPL
+INFO:app.main:MOCK mode: Generating 60 daily bars for AMZN
+INFO:app.main:MOCK mode: Generating 60 daily bars for GOOGL
+INFO:app.main:MOCK mode: Generating 60 daily bars for META
+INFO:app.main:MOCK mode: Generating 60 daily bars for MSFT
+INFO:app.main:MOCK mode: Generating 60 daily bars for NFLX
+INFO:app.main:MOCK mode: Generating 60 daily bars for NVDA
+INFO:app.main:MOCK mode: Generating 60 daily bars for QQQ
+INFO:app.main:MOCK mode: Generating 60 daily bars for SPY
+INFO:app.main:MOCK mode: Generating 60 daily bars for TSLA
+INFO:app.main:MOCK mode: Generating 60 daily bars for AAPL
+INFO:app.main:MOCK mode: Generating 60 daily bars for AMZN
+INFO:app.main:MOCK mode: Generating 60 daily bars for GOOGL
+INFO:app.main:MOCK mode: Generating 60 daily bars for META
+INFO:app.main:MOCK mode: Generating 60 daily bars for MSFT
+INFO:app.main:MOCK mode: Generating 60 daily bars for NFLX
+INFO:app.main:MOCK mode: Generating 60 daily bars for NVDA
+INFO:app.main:MOCK mode: Generating 60 daily bars for QQQ
+INFO:app.main:MOCK mode: Generating 60 daily bars for SPY
+INFO:app.main:MOCK mode: Generating 60 daily bars for TSLA
+ERROR:app.main:Positions error: Cannot run the event loop while another loop is running
+ERROR:app.main:Positions error: Cannot run the event loop while another loop is running
+ERROR:app.main:Positions error: Cannot run the event loop while another loop is running
+ERROR:app.main:Positions error: Cannot run the event loop while another loop is running
+ERROR:app.main:Positions error: Cannot run the event loop while another loop is running
+ERROR:app.main:Positions error: Cannot run the event loop while another loop is running
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating 60 daily bars for AAPL
+INFO:app.main:MOCK mode: Generating 60 daily bars for AMZN
+INFO:app.main:MOCK mode: Generating 60 daily bars for GOOGL
+INFO:app.main:MOCK mode: Generating 60 daily bars for META
+INFO:app.main:MOCK mode: Generating 60 daily bars for MSFT
+INFO:app.main:MOCK mode: Generating 60 daily bars for NFLX
+INFO:app.main:MOCK mode: Generating 60 daily bars for NVDA
+INFO:app.main:MOCK mode: Generating 60 daily bars for QQQ
+INFO:app.main:MOCK mode: Generating 60 daily bars for SPY
+INFO:app.main:MOCK mode: Generating 60 daily bars for TSLA
+INFO:app.main:MOCK mode: Generating 60 daily bars for AAPL
+INFO:app.main:MOCK mode: Generating 60 daily bars for AMZN
+INFO:app.main:MOCK mode: Generating 60 daily bars for GOOGL
+INFO:app.main:MOCK mode: Generating 60 daily bars for META
+INFO:app.main:MOCK mode: Generating 60 daily bars for MSFT
+INFO:app.main:MOCK mode: Generating 60 daily bars for NFLX
+INFO:app.main:MOCK mode: Generating 60 daily bars for NVDA
+INFO:app.main:MOCK mode: Generating 60 daily bars for QQQ
+INFO:app.main:MOCK mode: Generating 60 daily bars for SPY
+INFO:app.main:MOCK mode: Generating 60 daily bars for TSLA
+INFO:app.main:MOCK mode: Generating 60 daily bars for AAPL
+INFO:app.main:MOCK mode: Generating 60 daily bars for AMZN
+INFO:app.main:MOCK mode: Generating 60 daily bars for GOOGL
+INFO:app.main:MOCK mode: Generating 60 daily bars for META
+INFO:app.main:MOCK mode: Generating 60 daily bars for MSFT
+INFO:app.main:MOCK mode: Generating 60 daily bars for NFLX
+INFO:app.main:MOCK mode: Generating 60 daily bars for NVDA
+INFO:app.main:MOCK mode: Generating 60 daily bars for QQQ
+INFO:app.main:MOCK mode: Generating 60 daily bars for SPY
+INFO:app.main:MOCK mode: Generating 60 daily bars for TSLA
+INFO:app.main:MOCK mode: Generating 60 daily bars for AAPL
+INFO:app.main:MOCK mode: Generating 60 daily bars for AMZN
+INFO:app.main:MOCK mode: Generating 60 daily bars for GOOGL
+INFO:app.main:MOCK mode: Generating 60 daily bars for META
+INFO:app.main:MOCK mode: Generating 60 daily bars for MSFT
+INFO:app.main:MOCK mode: Generating 60 daily bars for NFLX
+INFO:app.main:MOCK mode: Generating 60 daily bars for NVDA
+INFO:app.main:MOCK mode: Generating 60 daily bars for QQQ
+INFO:app.main:MOCK mode: Generating 60 daily bars for SPY
+INFO:app.main:MOCK mode: Generating 60 daily bars for TSLA
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating 60 daily bars for AAPL
+INFO:app.main:MOCK mode: Generating 60 daily bars for AMZN
+INFO:app.main:MOCK mode: Generating 60 daily bars for GOOGL
+INFO:app.main:MOCK mode: Generating 60 daily bars for META
+INFO:app.main:MOCK mode: Generating 60 daily bars for MSFT
+INFO:app.main:MOCK mode: Generating 60 daily bars for NFLX
+INFO:app.main:MOCK mode: Generating 60 daily bars for NVDA
+INFO:app.main:MOCK mode: Generating 60 daily bars for QQQ
+INFO:app.main:MOCK mode: Generating 60 daily bars for SPY
+INFO:app.main:MOCK mode: Generating 60 daily bars for TSLA
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 52 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 1 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating 60 daily bars for AAPL
+INFO:app.main:MOCK mode: Generating 60 daily bars for AMZN
+INFO:app.main:MOCK mode: Generating 60 daily bars for GOOGL
+INFO:app.main:MOCK mode: Generating 60 daily bars for META
+INFO:app.main:MOCK mode: Generating 60 daily bars for MSFT
+INFO:app.main:MOCK mode: Generating 60 daily bars for NFLX
+INFO:app.main:MOCK mode: Generating 60 daily bars for NVDA
+INFO:app.main:MOCK mode: Generating 60 daily bars for QQQ
+INFO:app.main:MOCK mode: Generating 60 daily bars for SPY
+INFO:app.main:MOCK mode: Generating 60 daily bars for TSLA
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+INFO:app.main:MOCK mode: Generating synthetic quotes for 10 contracts
+ERROR:app.main:Positions error: Cannot run the event loop while another loop is running
+ERROR:app.main:Positions error: Cannot run the event loop while another loop is running
+ERROR:app.main:Positions error: Cannot run the event loop while another loop is running
+ERROR:app.main:Positions error: Cannot run the event loop while another loop is running
+ERROR:app.main:Positions error: Cannot run the event loop while another loop is running
+ERROR:app.main:Positions error: Cannot run the event loop while another loop is running
+ERROR:app.main:Positions error: Cannot run the event loop while another loop is running
+ERROR:app.main:Positions error: Cannot run the event loop while another loop is running
+ERROR:app.main:Positions error: Cannot run the event loop while another loop is running
+ERROR:app.main:Positions error: Cannot run the event loop while another loop is running
+ERROR:app.main:Positions error: Cannot run the event loop while another loop is running
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:app.main:Disconnecting from IB Gateway...
+INFO:ib_insync.ib:Disconnecting from 127.0.0.1:7497, 282 B sent in 26 messages, 18.6 kB received in 394 messages, session time 4.84 ks.
+INFO:ib_insync.client:Disconnecting
+INFO:     Application shutdown complete.
+INFO:     Finished server process [19578]

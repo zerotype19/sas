@@ -53,6 +53,30 @@ export default {
   async scheduled(event: ScheduledEvent, env: Bindings, ctx: ExecutionContext) {
     console.log('Running scheduled tasks', event.cron);
     
+    // Daily IV snapshot at 4:10 PM ET
+    if (event.cron === '10 20 * * 1-5') {
+      console.log('Running daily IV snapshot...');
+      try {
+        const workerBase = env.WORKER_BASE_URL || '';
+        if (workerBase) {
+          const snapshotRes = await fetch(`${workerBase}/cron/snapshot`, {
+            headers: { 'User-Agent': 'SAS-Cron-IVSnapshot/1.0' }
+          });
+          
+          if (!snapshotRes.ok) {
+            console.error(`IV snapshot failed (${snapshotRes.status})`);
+            return;
+          }
+          
+          const snapshotData = await snapshotRes.json();
+          console.log(`IV snapshot complete: ${snapshotData.successful}/${snapshotData.total} symbols`);
+        }
+      } catch (err) {
+        console.error('IV snapshot error:', err);
+      }
+      return;
+    }
+    
     // Run market data ingestion every 15 minutes
     if (event.cron === '*/15 * * * 1-5') {
       console.log('Running market data ingestion + strategy evaluation...');

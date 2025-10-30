@@ -29,7 +29,8 @@ crons = [
   "*/15 * * * 1-5",  # Every 15 minutes on weekdays (market data ingestion)
   "45 13 * * 1-5",   # 9:45 AM ET (1:45 PM UTC)
   "45 16 * * 1-5",   # 12:45 PM ET (4:45 PM UTC)
-  "45 19 * * 1-5"    # 3:45 PM ET (7:45 PM UTC)
+  "45 19 * * 1-5",   # 3:45 PM ET (7:45 PM UTC)
+  "10 20 * * 1-5"    # 4:10 PM ET (8:10 PM UTC) - Daily IV snapshot
 ]
 
 [vars]

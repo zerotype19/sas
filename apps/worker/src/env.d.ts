@@ -33,6 +33,8 @@ export type Bindings = {
   // Feature flags
   ENABLE_IVRV_EDGE?: string;  // 'true' | 'false'
   SAS_PHASE?: string;         // '1' | '2' | '3'
+  ENABLE_STALENESS_GUARD?: string; // 'true' | 'false'
+  STALENESS_PENALTY?: string;      // e.g., '3'
 };
 
 export type Env = {

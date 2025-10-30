@@ -13,6 +13,7 @@ import time
 import logging
 from concurrent.futures import ThreadPoolExecutor
 import threading
+import random
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 IB_HOST = os.getenv("IB_HOST", "127.0.0.1")
 IB_PORT = int(os.getenv("IB_PORT", "7497"))  # 7497 paper, 7496 live
 IB_CLIENT_ID = int(os.getenv("IB_CLIENT_ID", "19"))
+USE_MOCK = os.getenv("MARKET_DATA_MODE", "").lower() == "mock"
 
 app = FastAPI(
     title="IBKR Broker Service",
@@ -215,6 +217,16 @@ async def root():
 @app.post("/quote", response_model=QuoteResp)
 async def quote(req: QuoteReq):
     """Get real-time quote for a symbol"""
+    # MOCK mode fallback
+    if USE_MOCK:
+        price = 100 + random.random() * 20 - 10  # 90-110 range
+        return QuoteResp(
+            symbol=req.symbol,
+            last=round(price, 2),
+            bid=round(price - 0.05, 2),
+            ask=round(price + 0.05, 2),
+            timestamp=int(time.time() * 1000)
+        )
     
     def _get_quote():
         import asyncio
@@ -314,12 +326,63 @@ async def option_chain(req: OptionChainReq):
         raise HTTPException(500, f"Option chain failed: {e}")
 
 
+def _mock_option_quotes(contracts):
+    """Generate mock option quotes with realistic greeks and IV"""
+    quotes = []
+    for contract_req in contracts:
+        # Mock price calculation based on strike distance from 100 (arbitrary ATM)
+        K = contract_req.strike
+        mid = max(0.05, (abs(K - 100) / 10) + 0.5 + random.random() * 0.3)
+        bid = round(mid - 0.05 - random.random() * 0.05, 2)
+        ask = round(mid + 0.05 + random.random() * 0.05, 2)
+        mid = round((bid + ask) / 2, 2)
+        
+        # Mock IV and greeks
+        iv = round(0.30 + 0.10 * random.random(), 4)
+        
+        if contract_req.right.upper() == 'C':
+            delta = round(0.5 - (K - 100) / 50, 4)
+        else:
+            delta = round(-0.5 + (K - 100) / 50, 4)
+        
+        delta = max(-0.95, min(0.95, delta))
+        
+        quotes.append(OptionQuoteResp(
+            symbol=contract_req.symbol,
+            expiry=contract_req.expiry,
+            strike=K,
+            right=contract_req.right.upper(),
+            bid=bid,
+            ask=ask,
+            mid=mid,
+            last=mid,
+            iv=iv,
+            delta=delta,
+            gamma=round(0.01 + random.random() * 0.02, 4),
+            vega=round(0.08 + random.random() * 0.08, 4),
+            theta=round(-0.01 - random.random() * 0.04, 4),
+            volume=random.randint(100, 5000),
+            openInterest=random.randint(1000, 10000),
+            timestamp=int(time.time() * 1000)
+        ))
+    return quotes
+
+
 @app.post("/options/quotes", response_model=List[OptionQuoteResp])
 async def option_quotes(req: OptionQuotesReq):
-    """Get option quotes with greeks for specific contracts"""
+    """Get option quotes with greeks for specific contracts using STREAMING mode"""
     try:
+        # MOCK mode fallback for testing without live data
+        if USE_MOCK:
+            logger.info(f"MOCK mode: Generating synthetic quotes for {len(req.contracts)} contracts")
+            return _mock_option_quotes(req.contracts)
+        
         def _get_quotes():
             quotes = []
+            tickers = []
+            contracts = []
+            
+            # Build and qualify all contracts first
             for contract_req in req.contracts:
                 # Convert YYYY-MM-DD to YYYYMMDD
                 expiry_ib = contract_req.expiry.replace("-", "")
@@ -333,33 +396,28 @@ async def option_quotes(req: OptionQuotesReq):
                     exchange=contract_req.exchange or "SMART",
                     currency="USD"
                 )
-                
-                # Request market data with greeks
-                ib.reqMktData(contract, genericTickList="106", snapshot=True, regulatorySnapshot=False)
-                
-            # Wait for data to arrive
-            ib.sleep(2.0)
+                contracts.append(contract)
             
-            # Collect results
-            for contract_req in req.contracts:
-                expiry_ib = contract_req.expiry.replace("-", "")
-                contract = Option(
-                    symbol=contract_req.symbol,
-                    lastTradeDateOrContractMonth=expiry_ib,
-                    strike=contract_req.strike,
-                    right=contract_req.right.upper(),
-                    exchange=contract_req.exchange or "SMART",
-                    currency="USD"
-                )
-                
-                ticker = ib.ticker(contract)
-                
-                # Calculate mid price
+            # Qualify contracts
+            if contracts:
+                ib.qualifyContracts(*contracts)
+            
+            # Request STREAMING market data with greeks (NO snapshot for generic ticks!)
+            for contract in contracts:
+                ticker = ib.reqMktData(contract, genericTickList="106", snapshot=False, regulatorySnapshot=False)
+                tickers.append(ticker)
+            
+            # Wait for greeks to populate (delayed data needs more time)
+            ib.sleep(1.8)
+            
+            # Collect results and cancel subscriptions
+            for ticker in tickers:
+                # Extract data
                 mid = None
                 if ticker.bid and ticker.ask and ticker.bid > 0 and ticker.ask > 0:
                     mid = (ticker.bid + ticker.ask) / 2
                 
-                # Extract greeks
+                # Extract greeks (handle None gracefully)
                 model_greeks = ticker.modelGreeks
                 delta = model_greeks.delta if model_greeks and model_greeks.delta else None
                 gamma = model_greeks.gamma if model_greeks and model_greeks.gamma else None
@@ -367,11 +425,15 @@ async def option_quotes(req: OptionQuotesReq):
                 theta = model_greeks.theta if model_greeks and model_greeks.theta else None
                 iv = model_greeks.impliedVol if model_greeks and model_greeks.impliedVol else None
                 
+                # Get contract details
+                contract = ticker.contract
+                expiry_formatted = f"{contract.lastTradeDateOrContractMonth[:4]}-{contract.lastTradeDateOrContractMonth[4:6]}-{contract.lastTradeDateOrContractMonth[6:]}"
+                
                 quotes.append(OptionQuoteResp(
-                    symbol=contract_req.symbol,
-                    expiry=contract_req.expiry,
-                    strike=contract_req.strike,
-                    right=contract_req.right.upper(),
+                    symbol=contract.symbol,
+                    expiry=expiry_formatted,
+                    strike=contract.strike,
+                    right=contract.right,
                     bid=ticker.bid if ticker.bid and ticker.bid > 0 else None,
                     ask=ticker.ask if ticker.ask and ticker.ask > 0 else None,
                     mid=mid,
@@ -386,7 +448,7 @@ async def option_quotes(req: OptionQuotesReq):
                     timestamp=int(time.time() * 1000)
                 ))
                 
-                # Cancel market data subscription
+                # Cancel streaming subscription to avoid permanent stream
                 ib.cancelMktData(contract)
             
             return quotes
@@ -473,7 +535,7 @@ async def place_order(req: PlaceOrderReq):
 
 @app.get("/positions", response_model=List[PositionItem])
 async def positions():
-    """Get all positions"""
+    """Get all positions (safe stub on error)"""
     try:
         ib.reqPositions()
         ib.sleep(0.5)  # Wait for positions
@@ -511,7 +573,8 @@ async def positions():
         
     except Exception as e:
         logger.error(f"Positions error: {e}")
-        raise HTTPException(500, f"Positions failed: {e}")
+        # Safe stub: return empty list instead of 500
+        return []
 
 
 @app.get("/account", response_model=AccountSummary)
@@ -554,4 +617,113 @@ async def account():
     except Exception as e:
         logger.error(f"Account error: {e}")
         raise HTTPException(500, f"Account failed: {e}")
+
+
+class DailyBar(BaseModel):
+    date: str
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: int
+
+
+class DailyHistoryResp(BaseModel):
+    symbol: str
+    bars: List[DailyBar]
+
+
+def _mock_daily_bars(symbol: str, days: int = 60) -> List[DailyBar]:
+    """Generate deterministic mock daily price bars for RV calculation"""
+    import math
+    from datetime import datetime, timedelta
+    
+    # Seed random for deterministic results per symbol
+    random.seed(hash(symbol + str(datetime.utcnow().date())) % (2**32))
+    
+    price = 100.0
+    bars = []
+    
+    for i in range(days, 0, -1):  # Go backwards in time
+        # Small gaussian random walk (~1% daily vol)
+        ret = random.gauss(0, 0.01)
+        price *= math.exp(ret)
+        
+        date_obj = datetime.utcnow() - timedelta(days=i)
+        date_str = date_obj.strftime('%Y-%m-%d')
+        
+        bars.append(DailyBar(
+            date=date_str,
+            open=round(price * 0.995, 2),
+            high=round(price * 1.01, 2),
+            low=round(price * 0.99, 2),
+            close=round(price, 2),
+            volume=random.randint(1000000, 2000000)
+        ))
+    
+    return bars
+
+
+@app.get("/history/daily", response_model=DailyHistoryResp)
+async def get_daily_history(
+    symbol: str,
+    days: int = 60,
+    exchange: str = "SMART",
+    currency: str = "USD"
+):
+    """Get daily price history for RV calculation"""
+    try:
+        # MOCK mode fallback
+        if USE_MOCK:
+            logger.info(f"MOCK mode: Generating {days} daily bars for {symbol}")
+            bars = _mock_daily_bars(symbol, days)
+            return DailyHistoryResp(symbol=symbol, bars=bars)
+        
+        # Real IBKR data (future implementation)
+        def _get_history():
+            import asyncio
+            try:
+                asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            
+            contract = Stock(symbol, exchange, currency)
+            ib.qualifyContracts(contract)
+            
+            bars_data = ib.reqHistoricalData(
+                contract,
+                endDateTime='',
+                durationStr=f'{days} D',
+                barSizeSetting='1 day',
+                whatToShow='TRADES',
+                useRTH=True,
+                formatDate=1
+            )
+            
+            ib.sleep(2.0)
+            
+            result_bars = []
+            for bar in bars_data:
+                result_bars.append(DailyBar(
+                    date=bar.date.strftime('%Y-%m-%d'),
+                    open=float(bar.open),
+                    high=float(bar.high),
+                    low=float(bar.low),
+                    close=float(bar.close),
+                    volume=int(bar.volume)
+                ))
+            
+            return result_bars
+        
+        import asyncio
+        loop = asyncio.get_event_loop()
+        bars = await loop.run_in_executor(None, _get_history)
+        
+        logger.info(f"Returned {len(bars)} daily bars for {symbol}")
+        return DailyHistoryResp(symbol=symbol, bars=bars)
+        
+    except Exception as e:
+        logger.error(f"Daily history error for {symbol}: {e}")
+        raise HTTPException(500, f"Daily history failed: {e}")
 

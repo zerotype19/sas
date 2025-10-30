@@ -15,6 +15,7 @@ import strategyRun from './routes/strategyRun';
 import propose from './routes/propose';
 import proposals from './routes/proposals';
 import execute from './routes/execute';
+import cronSnapshot from './routes/cronSnapshot';
 
 const app = new Hono<{ Bindings: Bindings }>();
 
@@ -43,6 +44,9 @@ app.route('/strategy/run', strategyRun);
 app.route('/propose', propose);
 app.route('/proposals', proposals);
 app.route('/execute', execute);
+
+// Mount cron routes
+app.route('/cron/snapshot', cronSnapshot);
 
 // Validation schemas
 const SignalSchema = z.object({

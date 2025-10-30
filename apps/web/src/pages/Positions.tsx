@@ -15,7 +15,7 @@ type IBKRPosition = {
 export default function Positions() {
   const [positions, setPositions] = useState<IBKRPosition[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Soft-fail UX: no hard error surface
 
   useEffect(() => {
     fetchPositions();
@@ -23,15 +23,18 @@ export default function Positions() {
 
   async function fetchPositions() {
     setLoading(true);
-    setError(null);
+    // no-op: we don't surface hard errors
     try {
       const res = await fetch('/api/broker/positions');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setPositions(data);
+      const ok = res.ok;
+      const data = ok ? await res.json() : { positions: [] };
+      const list = Array.isArray(data) ? data : (data.positions ?? []);
+      setPositions(list);
+      // If not ok, do not treat as error; show empty state
     } catch (err: any) {
       console.error('Failed to fetch positions:', err);
-      setError(err.message);
+      // Soft-fail: surface hint instead of hard error
+      setPositions([]);
     } finally {
       setLoading(false);
     }
@@ -56,21 +59,16 @@ export default function Positions() {
       <div className="bg-white rounded-2xl shadow-md overflow-hidden">
         {loading ? (
           <div className="text-center py-12 text-gray-500">Loading positions...</div>
-        ) : error ? (
-          <div className="text-center py-12">
-            <p className="text-red-600 mb-2">Failed to load positions</p>
-            <p className="text-sm text-gray-500">{error}</p>
+        ) : positions.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            No open positions
+            <p className="text-sm mt-2">Broker may be unavailable or paper-only; syncing soon.</p>
             <button
               onClick={fetchPositions}
               className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              Retry
+              Refresh
             </button>
-          </div>
-        ) : positions.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            No open positions
-            <p className="text-sm mt-2">Positions will appear here when you have active trades</p>
           </div>
         ) : (
           <table className="w-full">

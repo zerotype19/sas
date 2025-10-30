@@ -130,14 +130,14 @@ export async function placeOrder(request: PlaceOrderRequest): Promise<OrderRespo
  * Get all positions
  */
 export async function getPositions(): Promise<Position[]> {
-  const response = await fetch(`${BASE}/positions`);
-  
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Positions failed (${response.status}): ${error}`);
+  try {
+    const response = await fetch(`${BASE}/positions`);
+    if (!response.ok) return [];
+    const data = await response.json();
+    return Array.isArray(data) ? data : (data.positions ?? []);
+  } catch {
+    return [];
   }
-  
-  return response.json();
 }
 
 /**

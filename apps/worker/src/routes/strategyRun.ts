@@ -18,6 +18,7 @@ import type { StrategyInput, Proposal, OptionChain, TrendDirection } from '../ty
 import { getDailyCloses } from '../data/history';
 import { calcRV20 } from '../analytics/realizedVol';
 import { calcIvrvMetrics } from '../analytics/ivrv';
+import { isTodayUTC } from '../lib/metricsFreshness';
 
 // Import all strategy modules
 import * as longCall from '../strategies/longCall';
@@ -109,7 +110,27 @@ app.get('/', async (c) => {
         }
 
         // Run all enabled strategies for this symbol
-        const proposals = await runEnabledStrategies(input, c.env);
+        let proposals = await runEnabledStrategies(input, c.env);
+
+        // Apply staleness guard (light penalty if volatility_metrics not from today)
+        try {
+          const guardOn = (c.env.ENABLE_STALENESS_GUARD ?? 'true').toLowerCase() === 'true';
+          if (guardOn) {
+            const latest = await db
+              .prepare(`SELECT created_at FROM volatility_metrics WHERE symbol = ? ORDER BY created_at DESC LIMIT 1`)
+              .bind(symbol)
+              .first<any>();
+            const fresh = latest?.created_at ? isTodayUTC(Number(latest.created_at)) : false;
+            if (!fresh) {
+              const penalty = Number(c.env.STALENESS_PENALTY ?? '3');
+              proposals = proposals.map(p => ({
+                ...p,
+                score: Math.max(0, p.score - penalty),
+                rationale: p.rationale ? `${p.rationale} | staleness -${penalty}` : `staleness -${penalty}`
+              }));
+            }
+          }
+        } catch {}
         
         allProposals.push(...proposals);
         
